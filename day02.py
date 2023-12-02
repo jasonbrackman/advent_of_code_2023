@@ -32,7 +32,7 @@ def part01(games: GamesType) -> int:
             green = roll.get("green", 13)
             blue = roll.get("blue", 14)
 
-            if not (red <= 12 and blue <= 14 and green <= 13):
+            if not (red <= 12 and green <= 13 and blue <= 14):
                 good = False
         if good:
             rsults.append(game)
@@ -40,14 +40,14 @@ def part01(games: GamesType) -> int:
 
 
 def part02(games: GamesType) -> int:
-    # rules are to find the maximum power of maximum number of cubes needed
+    # rules are to find the power of maximum number of cubes needed
     results = []
     for game, rolls in games.items():
-        red_min = max(roll.get("red", 1) for roll in rolls)
-        green_min = max(roll.get("green", 1) for roll in rolls)
-        blue_min = max(roll.get("blue", 1) for roll in rolls)
+        red_max = max(roll.get("red", 1) for roll in rolls)
+        green_max = max(roll.get("green", 1) for roll in rolls)
+        blue_max = max(roll.get("blue", 1) for roll in rolls)
 
-        results.append(red_min * green_min * blue_min)
+        results.append(red_max * green_max * blue_max)
     return sum(results)
 
 
