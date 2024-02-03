@@ -9,6 +9,9 @@ F is a 90-degree bend connecting south and east.
 S is the starting position of the animal; there is a pipe on this tile, but your sketch
 doesn't show what shape the pipe has.
 """
+
+PosType = tuple[int, int]
+
 dirs = {
     'N': (-1, 0),
     'E': (0, 1),
@@ -35,7 +38,7 @@ def parse() -> list[list[str]]:
     return hm
 
 
-def get_start_pos(hm: list[list[str]]) -> tuple[int, int]:
+def get_start_pos(hm: list[list[str]]) -> PosType:
     for r, row in enumerate(hm):
         for c, cell in enumerate(row):
             if cell == "S":
@@ -43,15 +46,15 @@ def get_start_pos(hm: list[list[str]]) -> tuple[int, int]:
     raise ValueError("No start position found")
 
 
-def add_pos(pos: tuple[int, int], other: tuple[int, int]) -> tuple[int, int]:
+def add_pos(pos: PosType, other: PosType) -> PosType:
     return pos[0] + other[0], pos[1] + other[1]
 
 
-def get_inverse(pos: tuple[int, int]) -> tuple[int, int]:
+def get_inverse(pos: PosType) -> PosType:
     return -pos[0], -pos[1]
 
 
-def get_neighbours(pos: tuple[int, int], hm: list[list[str]]) -> list[tuple[int, int]]:
+def get_neighbours(pos: PosType, hm: list[list[str]]) -> list[PosType]:
     neighbours = []
     possibles = rules[hm[pos[0]][pos[1]]]
     for possible in possibles:
