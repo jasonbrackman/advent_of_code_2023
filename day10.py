@@ -13,20 +13,20 @@ doesn't show what shape the pipe has.
 PosType = tuple[int, int]
 
 dirs = {
-    'N': (-1, 0),
-    'E': (0, 1),
-    'S': (1, 0),
-    'W': (0, -1),
+    "N": (-1, 0),
+    "E": (0, 1),
+    "S": (1, 0),
+    "W": (0, -1),
 }
 
 rules = {
-    '|': {dirs['N'], dirs['S']},
-    '-': {dirs['E'], dirs['W']},
-    'L': {dirs['N'], dirs['E']},
-    'J': {dirs['N'], dirs['W']},
-    '7': {dirs['S'], dirs['W']},
-    'F': {dirs['S'], dirs['E']},
-    '.': set(),
+    "|": {dirs["N"], dirs["S"]},
+    "-": {dirs["E"], dirs["W"]},
+    "L": {dirs["N"], dirs["E"]},
+    "J": {dirs["N"], dirs["W"]},
+    "7": {dirs["S"], dirs["W"]},
+    "F": {dirs["S"], dirs["E"]},
+    ".": set(),
 }
 
 
@@ -65,13 +65,33 @@ def get_neighbours(pos: PosType, hm: list[list[str]]) -> list[PosType]:
     return neighbours
 
 
-def part01():
-    hm = parse()
-    start = get_start_pos(hm)
-    hm[start[0]][start[1]] = 'F'  # This should not be hardcoded; but seems to be fine for now
+def part01(pipes: set[PosType]) -> int:
+    return int(len(pipes) / 2)
 
-    seen = {start, }
 
+def part02(hm: list[list[str]], pipes: set[PosType]) -> int:
+    debug = []
+    t = 0
+    for row, rr in enumerate(hm):
+        for col, _ in enumerate(rr):
+            if (row, col) not in pipes:
+                # If hit count is odd, the space is within the polygon.
+                raycast = [hm[row][i] for i in range(-1, col) if (row, i) in pipes]
+
+                # Account for lines L--7 is 1 hit L--J is two (its a miss but even)
+                hits = [i for i in raycast if i in ("|JL")]
+                if len(hits) % 2 == 1:
+                    t += 1
+                    debug.append((row, col))
+
+    # pprint(debug, hm, pipes)
+    return t
+
+
+def pipe_path(hm, start):
+    seen = {
+        start,
+    }
     neighbours = get_neighbours(start, hm)
     while neighbours:
         pos = neighbours.pop()
@@ -83,12 +103,32 @@ def part01():
             seen.add(pos)
             if n not in seen:
                 neighbours.append(n)
+    return seen
 
-    assert int(len(seen) / 2) == 6690
+
+def pprint(debug, hm, seen):
+    for index, row in enumerate(hm):
+        for c in range(len(row)):
+            if (index, c) in debug:
+                print("*", end="")
+            elif (index, c) not in seen:
+                print(" ", end="")
+            else:
+                print(hm[index][c], end="")
+        print()
 
 
 def run() -> None:
-    part01()
+    hm = parse()
+    start = get_start_pos(hm)
+
+    # This probably should not be hardcoded; visual check for input/tests is the same.
+    hm[start[0]][start[1]] = "F"
+
+    pipes = pipe_path(hm, start)
+
+    assert part01(pipes) == 6690
+    assert part02(hm, pipes) == 525
 
 
 if __name__ == "__main__":
