@@ -1,7 +1,6 @@
 from __future__ import annotations
 from collections import deque
 from dataclasses import dataclass
-from typing import List
 
 Grid = list[str]
 
@@ -80,12 +79,8 @@ class Node:
         return nodes
 
 
-def part01():
-    grid = parse(r"./data/day16.txt")
-
-    start = Node((0, 0), (1, 0))
+def _spin(grid, start):
     nodes = deque([start])
-
     visited = {start}
     while nodes:
         current = nodes.popleft()
@@ -93,13 +88,45 @@ def part01():
             if node not in visited:
                 visited.add(node)
                 nodes.append(node)
+    return len({v.pos for v in visited})
 
-    total = len({v.pos for v in visited})
+
+def part01() -> None:
+    grid = parse(r"./data/day16.txt")
+    start = Node((0, 0), (1, 0))
+    total = _spin(grid, start)
     assert total == 7939
+
+
+def part02() -> None:
+    grid = parse(r"./data/day16.txt")
+
+    scores = set()
+
+    side_len = len(grid)
+    for index in range(side_len):
+        # top
+        start = Node((-1, index), (1, 0))
+        scores.add(_spin(grid, start))
+
+        # bottom
+        start = Node((side_len, index), (-1, 0))
+        scores.add(_spin(grid, start))
+
+        # left
+        start = Node((index, -1), (0, 1))
+        scores.add(_spin(grid, start))
+
+        # right
+        start = Node((index, side_len), (0, -1))
+        scores.add(_spin(grid, start))
+
+    assert max(scores) - 1 == 8318  # Remove the dummy position we started with
 
 
 def run():
     part01()
+    part02()
 
 
 if __name__ == "__main__":
