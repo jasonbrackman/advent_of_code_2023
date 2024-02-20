@@ -1,15 +1,14 @@
 from __future__ import annotations
-import sys
 from dataclasses import dataclass, field
-from typing import Optional
-
-from queue import PriorityQueue
+import sys
+import heapq
 
 
 sys.setrecursionlimit(5000)
 
-Grid = list[list[int]]
+
 Vec2 = tuple[int, int]
+Grid = dict[Vec2, int]
 
 dirs = {
     (0, 1): ">",
@@ -23,75 +22,106 @@ dirs = {
 class Node:
     pos: Vec2
     dir: Vec2
-    his: tuple[Vec2, ...]
-    val: int = field(default=0)
-    prev: Optional[Node] = field(default=None)
+    his: int
+    goal: Vec2
+    val: int
+    key: tuple[Vec2, Vec2, int] = field(init=False)
 
-    def manhattan(self, p2: Vec2) -> int:
-        return abs(self.pos[0] - p2[0]) + abs(self.pos[1] - p2[1])
+    def __post_init__(self):
+        self.key = (
+            self.pos,
+            self.dir,
+            self.val,
+        )
+
+    def manhattan(self) -> int:
+        return abs(self.pos[0] - self.goal[0]) + abs(self.pos[1] - self.goal[1])
 
     def __lt__(self, other):
-        return self.val < other.val
-
-    def __hash__(self):
-        return hash(self.pos) + hash(self.dir) + hash(self.his) + hash(self.val)
+        # return (self.val, self.his) < (other.val, other.his)
+        # return (self.manhattan(), self.val) < (other.manhattan(), self.val)
+        return self.manhattan() < other.manhattan()
 
 
 def parse(s: str) -> Grid:
+    grid: dict[Vec2, int] = dict()
     with open(s, "r", encoding="utf8") as file:
-        return [list(int(i) for i in f.strip()) for f in file]
+        for y, row in enumerate(file):
+            for x, col in enumerate(row.strip()):
+                grid[y, x] = int(col)
+    return grid
 
 
-def get_neighbours(grid: Grid, node: Node) -> list[Node]:
+def get_neighbours(
+    grid: Grid, node: Node, goal: Vec2, min_: int, max_: int
+) -> list[Node]:
     """Can try left, right, and forward, but not backward."""
     neighbours = []
-    his = node.his[0] if len(node.his) == 3 else None
 
-    # ensure new_pos is not the inverse of the .dir
+    if node.his < min_:
+        y, x = node.pos[0] + node.dir[0], node.pos[1] + node.dir[1]
+        if (y, x) in grid:
+            return [
+                Node(
+                    (y, x),
+                    node.dir,
+                    node.his + 1,
+                    goal,
+                    node.val + grid[(y, x)],
+                )
+            ]
+
     for d in ((0, 1), (0, -1), (1, 0), (-1, 0)):
-        if d == his:
-            continue
-        if (d[0] + node.dir[0], d[1] + node.dir[1]) == (0, 0):
+        # new direction should not be equal to the heading if reached maximum moves.
+        if node.his == max_ and d == node.dir:
             continue
 
+        # if the y, x position is within the Grid and not a backstep
         y, x = node.pos[0] + d[0], node.pos[1] + d[1]
-
-        if 0 <= y < len(grid) and 0 <= x < len(grid[0]):
-            new_his = (d,) if d not in node.his else node.his + (d,)
+        if (y, x) != node.pos and (y, x) in grid:
+            new_his = 1 if d != node.dir else node.his + 1
             neighbours.append(
-                Node((y, x), d, new_his, node.val + grid[y][x], prev=node)
+                Node(
+                    (y, x),
+                    d,
+                    new_his,
+                    goal,
+                    node.val + grid[(y, x)],
+                )
             )
 
     return neighbours
 
 
 def part01(grid: Grid):
+    _max_grid = max(grid)
+    goal = _max_grid[0] - 1, _max_grid[1] - 1
+    start = Node((0, 0), (0, 1), 1, goal, 0)
+
+    Q = [start]
+
     result = None
     min_val = sys.maxsize
+    visited = set()
 
-    start = Node((0, 0), (0, 1), ((0, 1),))
-    dest = (len(grid) - 1, len(grid[0]) - 1)
-    visited = {start}
-
-    nodes = PriorityQueue()
-    nodes.put((start.manhattan(dest), start))
-    while not nodes.empty():
-        _, current = nodes.get()
-        if current.val >= min_val:
+    while Q:
+        current = heapq.heappop(Q)
+        if current.key in visited:
             continue
 
-        if current.pos == dest:
+        visited.add(current.key)
+
+        if current.pos == goal:
             print("Result:", current)
             if current.val < min_val:
                 min_val = current.val
                 result = current
             continue
 
-        for item in get_neighbours(grid, current):
-            hash_item = hash(item)
-            if hash_item not in visited and item.val < min_val:
-                visited.add(hash_item)
-                nodes.put((item.manhattan(dest), item))
+        for item in get_neighbours(grid, current, goal, 0, 3):
+            if item.key not in visited:
+                if item.val < min_val:
+                    heapq.heappush(Q, item)
 
     return result
 
@@ -99,12 +129,7 @@ def part01(grid: Grid):
 def run() -> None:
     grid = parse(r"./data/day17.txt")
     r = part01(grid)
-
-    t1 = 0
-    while r.prev is not None:
-        t1 += grid[r.pos[0]][r.pos[1]]
-        r = r.prev
-    assert t1 == 724
+    assert r.val == 724
 
 
 if __name__ == "__main__":
