@@ -31,16 +31,11 @@ class Node:
         self.key = (
             self.pos,
             self.dir,
-            self.val,
+            self.his,
         )
 
-    def manhattan(self) -> int:
-        return abs(self.pos[0] - self.goal[0]) + abs(self.pos[1] - self.goal[1])
-
     def __lt__(self, other):
-        # return (self.val, self.his) < (other.val, other.his)
-        # return (self.manhattan(), self.val) < (other.manhattan(), self.val)
-        return self.manhattan() < other.manhattan()
+        return self.val < other.val
 
 
 def parse(s: str) -> Grid:
@@ -73,12 +68,15 @@ def get_neighbours(
 
     for d in ((0, 1), (0, -1), (1, 0), (-1, 0)):
         # new direction should not be equal to the heading if reached maximum moves.
-        if node.his == max_ and d == node.dir:
+        if d == node.dir and node.his == max_:
+            continue
+
+        if (d[0] + node.dir[0], d[1] + node.dir[1]) == (0, 0):
             continue
 
         # if the y, x position is within the Grid and not a backstep
         y, x = node.pos[0] + d[0], node.pos[1] + d[1]
-        if (y, x) != node.pos and (y, x) in grid:
+        if (y, x) in grid:
             new_his = 1 if d != node.dir else node.his + 1
             neighbours.append(
                 Node(
@@ -94,9 +92,8 @@ def get_neighbours(
 
 
 def part01(grid: Grid):
-    _max_grid = max(grid)
-    goal = _max_grid[0] - 1, _max_grid[1] - 1
-    start = Node((0, 0), (0, 1), 1, goal, 0)
+    goal = max(grid)
+    start = Node((0, 0), (0, 1), 0, goal, 0)
 
     Q = [start]
 
@@ -112,11 +109,8 @@ def part01(grid: Grid):
         visited.add(current.key)
 
         if current.pos == goal:
-            print("Result:", current)
-            if current.val < min_val:
-                min_val = current.val
-                result = current
-            continue
+            # print("Result:", current)
+            return current
 
         for item in get_neighbours(grid, current, goal, 0, 3):
             if item.key not in visited:
