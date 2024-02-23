@@ -13,7 +13,6 @@ class Node:
     dir: Vec2
     his: int
     val: int
-    parent: Optional[Node]  # used for debugging
     key: tuple[Vec2, Vec2, int] = field(init=False)
 
     def __post_init__(self):
@@ -32,6 +31,19 @@ def parse(s: str) -> Grid:
     return grid
 
 
+def _jump_move(
+    grid: Grid, node: Node, node_dir: Vec2, min_: int
+) -> tuple[int, int, int]:
+    """Move forward the minimum number of steps required by the rules."""
+    y, x = node.pos
+    v = node.val
+    for _ in range(min_):
+        y += node_dir[0]
+        x += node_dir[1]
+        v += grid.get((y, x), 0)
+    return y, x, v
+
+
 def get_neighbours(grid: Grid, node: Node, min_: int, max_: int) -> list[Node]:
     """Can try left, right, and forward, but not backward."""
     neighbours = []
@@ -48,60 +60,26 @@ def get_neighbours(grid: Grid, node: Node, min_: int, max_: int) -> list[Node]:
             y, x = node.pos[0] + d[0], node.pos[1] + d[1]
             if (y, x) in grid:
                 neighbours.append(
-                    Node((y, x), d, node.his + 1, node.val + grid[(y, x)], node)
+                    Node((y, x), d, node.his + 1, node.val + grid[(y, x)])
                 )
         else:
             # Turning 90 degrees; move min_ spaces and check if result in grid.
-            y, x = node.pos
-            v = node.val
-            for _ in range(min_):
-                y += d[0]
-                x += d[1]
-                v += grid.get((y, x), 0)
+            y, x, v = _jump_move(grid, node, d, min_)
             if (y, x) in grid:
-                neighbours.append(Node((y, x), d, min_, v, node))
+                neighbours.append(Node((y, x), d, min_, v))
 
     return neighbours
 
 
-def part01(grid: Grid):
-    goal = max(grid)
-    start = Node((0, 0), (0, 1), 0, 0, None)
-
-    Q = [start]
-
-    result = None
-    visited = set()
-
-    while Q:
-        current = heapq.heappop(Q)
-        if current.key in visited:
-            continue
-
-        visited.add(current.key)
-
-        if current.pos == goal:
-            return current
-
-        for item in get_neighbours(grid, current, 1, 3):
-            if item.key not in visited:
-                heapq.heappush(Q, item)
-
-    return result
-
-
-def part02(grid: Grid):
+def pathfind(grid: Grid, min_: int, max_: int) -> Optional[Node]:
     goal = max(grid)
 
     # some setup here to ensure that the Crucible starts with a four move!
-    start = Node((0, 0), (0, 1), 0, 0, None)
-    y, x = start.pos
-    v = start.val
-    for _ in range(4):
-        y += 0
-        x += 1
-        v += grid.get((y, x), 0)
-    Q = [Node((y, x), (0, 1), 4, v, start)]
+    start = Node((0, 0), (0, 1), 0, 0)
+
+    y, x, v = _jump_move(grid, start, start.dir, min_)
+
+    Q = [Node((y, x), start.dir, min_, v)]
 
     result = None
     visited = set()
@@ -117,7 +95,7 @@ def part02(grid: Grid):
         if current.pos == goal:
             return current
 
-        for item in get_neighbours(grid, current, 4, 10):
+        for item in get_neighbours(grid, current, min_, max_):
             if item.key not in visited:
                 heapq.heappush(Q, item)
 
@@ -126,36 +104,12 @@ def part02(grid: Grid):
 
 def run() -> None:
     grid = parse(r"./data/day17.txt")
-    r = part01(grid)
-    assert r.val == 724
+    part01 = pathfind(grid, 1, 3)
+    assert part01.val == 724
 
     grid = parse(r"./data/day17.txt")
-    r = part02(grid)
-    assert r.val == 877
-
-
-def pprint(grid, r):
-    dirs = {
-        (0, 1): ">",
-        (0, -1): "<",
-        (1, 0): "v",
-        (-1, 0): "^",
-    }
-
-    results = dict()
-    while r.parent is not None:
-        results[r.pos] = r.dir
-        r = r.parent
-
-    max_grid = max(grid)
-    for y in range(max_grid[0] + 1):
-        line = ""
-        for x in range(max_grid[1] + 1):
-            if (y, x) in results:
-                line += dirs[results[(y, x)]]
-            else:
-                line += " "
-        print(line)
+    part02 = pathfind(grid, 4, 10)
+    assert part02.val == 877
 
 
 if __name__ == "__main__":
