@@ -1,0 +1,4 @@
+z: a r b
+a: z r
+r: a b z
+b: r z
